@@ -2,16 +2,23 @@ package "vsftpd" do
   action :install
 end
 
-directory "/etc/vsftpd/users" do
+service "vsftpd" do
+  supports :status => true, :restart => true, start: true
+  action [ :enable, :nothing ]
+end
+
+directory node['vsftpd']['users_config'] do
   owner "root"
   group "root"
   mode "0755"
   action :create
+  recursive true
 end
 
-cookbook_file "/etc/vsftpd/vsftpd.conf" do
-  source "vsftpd.conf" # this is the value that would be inferred from the path parameter
+cookbook_file node['vsftpd']['config_file'] do
+  source "vsftpd.conf"
   mode "0600"
+  notifies :restart, 'service[vsftpd]'
 end
 
 node["vsftpd_users"].each do |user, options|
@@ -21,9 +28,8 @@ node["vsftpd_users"].each do |user, options|
     group "root"
     variables(:config_lines => options)
   end
-end
 
-service "vsftpd" do
-  supports :status => true, :restart => true, :reload => true
-  action [ :enable, :start ]
-end
+  # vsftpd_userlist user
+end if node["vsftpd_users"]
+
+
